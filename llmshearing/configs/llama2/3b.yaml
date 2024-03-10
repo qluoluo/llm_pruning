@@ -1,6 +1,6 @@
-data_local: /scratch/gpfs/mengzhou/space2/examples/examples/llm/llama-dedup
+data_local: /remote-home/rypeng/0224/LLM-Shearing/data/for_prune
 data_remote: # If blank, files must be present in data_local
-tokenizer_name: /projects/DANQIC/mengzhou/LLaMA2/hf-7B
+tokenizer_name: /remote-home/share/models/llama_v2_hf/7b/
 max_seq_len: 4096
 global_seed: 17
 
@@ -120,13 +120,8 @@ callbacks:
 
 
 loggers:
-  wandb: 
-    project: pruning
-    entity: pruning
-    name: ${run_name}
-    init_kwargs:
-      mode: offline
-      dir: wandb_dir
+  tensorboard:
+    log_dir: tensorboard_dir
 
 # Checkpoint to local filesystem or remote object store
 save_interval: 800ba 
