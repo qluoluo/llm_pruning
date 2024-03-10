@@ -1,19 +1,26 @@
 # pruning llama2 7b -> 3b or 1.3b
 
 # Please specify the working folder
-PROJ_DIR=/scratch/gpfs/mengzhou/space2/LLM-Shearing
+# PROJ_DIR=/scratch/gpfs/mengzhou/space2/LLM-Shearing
+# LAUNCH_SCRIPT=${PROJ_DIR}/llmshearing/scripts/launch.sh
+# DATA_DIR=/scratch/gpfs/mengzhou/llm_data/version5-uint16/500b_dedup_4k/for_prune
+# OUTPUT_DIR=/scratch/gpfs/mengzhou/space2/out/test_release_pruning_full
+# TRAIN_SCRIPT=${PROJ_DIR}/llmshearing/train.py
+# MODEL_PATH=/projects/DANQIC/mengzhou/LLaMA2
+
+PROJ_DIR=/remote-home/rypeng/0224/LLM-Shearing
 LAUNCH_SCRIPT=${PROJ_DIR}/llmshearing/scripts/launch.sh
-DATA_DIR=/scratch/gpfs/mengzhou/llm_data/version5-uint16/500b_dedup_4k/for_prune
-OUTPUT_DIR=/scratch/gpfs/mengzhou/space2/out/test_release_pruning_full
+DATA_DIR=/remote-home/rypeng/0224/LLM-Shearing/data/for_prune
+OUTPUT_DIR=/remote-home/rypeng/0224/LLM-Shearing/models/test-1b-composer
 TRAIN_SCRIPT=${PROJ_DIR}/llmshearing/train.py
-MODEL_PATH=/projects/DANQIC/mengzhou/LLaMA2
+MODEL_PATH=/remote-home/rypeng/0224/LLM-Shearing/models/
 
 # Specify $PROJ_DIR in scripts/launch.sh and scripts/srun_launch.sh if using slurm
 
 test=False
 
 from_model=7b # source model size
-to_model=2.7b # target model size
+to_model=1.3b # target model size
 config_file=${PROJ_DIR}/llmshearing/configs/llama2/${from_model}.yaml
 path=$MODEL_PATH/mosaic-7B/state_dict.pt
 
@@ -23,7 +30,7 @@ data_local=${DATA_DIR}
 # basic setup
 max_seq_len=4096
 device_train_microbatch_size=4
-global_train_batch_size=32
+global_train_batch_size=64
 device_eval_batch_size=8
 
 # learning setup
@@ -65,7 +72,7 @@ fi
 # save directroy
 run_name=llama2_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}
 save_dir=${OUTPUT_DIR}/${run_name}
-wandb_dir=${save_dir} # save locally
+tensorboard_dir=${save_dir} # save locally
 
 if [[ $test == True ]]; then t=00-01:00:00; else t=00-20:00:00; fi
 
@@ -74,10 +81,10 @@ if [[ $test == True ]]; then t=00-01:00:00; else t=00-20:00:00; fi
 
 # Run with slurm    
 sbatch --job-name ${run_name} \
-    --nodes=4 \
-    --gpus-per-node=2 \
+    --partition=moss \
+    --nodes=1 \
+    --gpus-per-node=4 \
     --mem=512gb \
-    --cpus-per-task=8 \
     --time $t \
     $LAUNCH_SCRIPT \
     $config_file \
@@ -92,7 +99,6 @@ sbatch --job-name ${run_name} \
     eval_first=false \
     scheduler.t_warmup=${t_warmup} \
     save_folder=${save_dir} \
-    loggers.wandb.init_kwargs.dir=${wandb_dir} \
     eval_interval=${eval_interval} \
     save_interval=${save_interval} \
     optimizer.lr=${lr} \

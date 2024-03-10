@@ -1,18 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=test
-#SBATCH --partition=gputest
-#SBATCH --time=1:00:00
 
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=2
-#SBATCH --cpus-per-task=8
+#SBATCH --gpus-per-node=4
 #SBATCH --mem=512gb
-#SBATCH --constraint gpu80
-#SBATCH --output=/scratch/gpfs/mengzhou/space2/out/logs/%x-%j.out
+#SBATCH --output=/remote-home/rypeng/0224/LLM-Shearing/logs/%x-%j.out
 
-PROJ_DIR=$n/space2/LLM-Shearing
-LOG_DIR=/scratch/gpfs/mengzhou/space2/out/logs
+
+PROJ_DIR=/remote-home/rypeng/0224/LLM-Shearing
+LOG_DIR=/remote-home/rypeng/0224/LLM-Shearing/logs
 
 # num_nodes=$(scontrol show job $SLURM_JOB_ID | grep NodeList=della | wc -l)
 num_nodes=$(scontrol show hostnames $SLURM_JOB_NODELIST | wc -l)

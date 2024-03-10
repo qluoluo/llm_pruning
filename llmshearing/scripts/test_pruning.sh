@@ -65,7 +65,7 @@ fi
 # save directroy
 run_name=llama2_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}
 save_dir=${OUTPUT_DIR}/${run_name}
-wandb_dir=${save_dir} # save locally
+tensorboard_dir=${save_dir} # save locally
 
 if [[ $test == True ]]; then t=00-01:00:00; else t=01-00:00:00; fi
 
