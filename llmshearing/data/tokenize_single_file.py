@@ -1,4 +1,3 @@
-from transformers import AutoTokenizer
 from llama_tokenizer import Tokenizer
 from tqdm import tqdm
 import sys
@@ -12,6 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--raw_dir", type=str, help="Directory for raw data")
 parser.add_argument("--target_dir", type=str, help="Target directory to save tokenized numpy")
 parser.add_argument("--seq_length", type=int, default=4096, help="Sequence length")
+parser.add_argument("--tokenizer", type=str, default=None, help="Tokenizer path (sentencepiece)")
 args = parser.parse_args()
 
 index_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"))
@@ -19,6 +19,9 @@ file_name = open("jsonl_list.txt").readlines()[index_id].strip()
 
 target_name = os.path.join(args.target_dir, os.path.splitext(file_name)[0] + ".npy")
 file_name = os.path.join(args.raw_dir, file_name)
+if os.path.exists(target_name):
+    print(f"the file ({file_name}) is already processed")
+    exit(0)
 
 print("Raw file path:", file_name)
 print("Target path:", target_name)
@@ -29,7 +32,11 @@ if not os.path.exists(target_folder):
     os.makedirs(target_folder)
 
 print("Load tokenizer...")
-tok = Tokenizer("tokenizer.model") # this is faster than the huggingface tokenizer
+if args.tokenizer is None:
+    tokenizer_path = "./tokenizer.model"
+else:
+    tokenizer_path = args.tokenizer
+tok = Tokenizer(tokenizer_path) # this is faster than the huggingface tokenizer
 print("Done")
 
 print("Loading file...")
