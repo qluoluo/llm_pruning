@@ -462,8 +462,8 @@ class LlamaAttention(nn.Module):
 
         self.out_proj = nn.Linear(self.d_model, self.d_model, device=device, bias=False)
         self.out_proj._is_residual = True  # type: ignore
-        
-        self.rotary_emb = LlamaRotaryEmbedding(self.head_dim)
+
+        self.rotary_emb = LlamaRotaryEmbedding(self.head_dim, max_position_embeddings=cfg.max_position_embeddings, base=cfg.rope_theta)
     
     def prune_params(self, zs_block):
         head_z = None; head_layer_z = None; hidden_z = None; qk_head_dim_z = None; vo_head_dim_z = None
