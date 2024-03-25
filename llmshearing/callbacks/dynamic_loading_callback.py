@@ -48,6 +48,8 @@ class DynamicLoadingCallback(Callback):
             
         updated_domain_weights = updated_domain_weights.numpy().astype('float64')
         updated_domain_weights = updated_domain_weights / updated_domain_weights.sum()
+        print(f'{losses=}, {self.target_loss=}') # the target loss may be nan
+        print(f'{current_prop=} {updated_domain_weights=}')
         return updated_domain_weights.tolist()
     
     def after_train_batch(self, state: State, logger: Logger) -> None:
