@@ -44,7 +44,7 @@ def build_text_dataloader(cfg: DictConfig, device_batch_size: int, dynamic: bool
                                                 'num_canonical_nodes', 128),
                                               proportion=proportion,
                                               set_names=set_names,
-                                              is_uint16=cfg.dataset.get("is_uint16", False))
+                                              is_uint32=cfg.dataset.get("is_uint32", False))
     else:
         dataset = TextStreamingDataset(
             local=cfg.dataset.local,
@@ -55,7 +55,7 @@ def build_text_dataloader(cfg: DictConfig, device_batch_size: int, dynamic: bool
             num_canonical_nodes=cfg.dataset.get(
                 'num_canonical_nodes', 128),
             batch_size=device_batch_size,
-            is_uint16=cfg.dataset.get("is_uint16", False))
+            is_uint32=cfg.dataset.get("is_uint32", False))
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.dataset.tokenizer_name)
     if isinstance(dataset[0], Mapping) and "set" in dataset[0]:

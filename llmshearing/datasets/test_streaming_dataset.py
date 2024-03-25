@@ -6,17 +6,17 @@ from streaming.base.dataset import StreamingDataset
 from llmshearing.datasets.streaming_dataset import (
     TextDynamicStreamingDataset, TextStreamingDataset)
 
-dataset = TextDynamicStreamingDataset(local="/scratch/gpfs/mengzhou/llm_data/version5-uint16/500b_dedup_4k/for_prune",
+dataset = TextDynamicStreamingDataset(local="/scratch/gpfs/mengzhou/llm_data/version5-uint32/500b_dedup_4k/for_prune",
                                       set_names=["cc", "github", "wiki"], 
                                       proportion=[0.5, 0.25, 0.25],
                                       shuffle=True,
-                                      is_uint16=True,
+                                      is_uint32=True,
                                       max_seq_len=4096)
 
-validd = TextStreamingDataset(local="/scratch/gpfs/mengzhou/llm_data/version5-uint16/500b_dedup_4k/for_prune",
+validd = TextStreamingDataset(local="/scratch/gpfs/mengzhou/llm_data/version5-uint32/500b_dedup_4k/for_prune",
                               split="eval_merge",
                               shuffle=False,
-                              is_uint16=True,
+                              is_uint32=True,
                               max_seq_len=4096,
                               num_canonical_nodes=100)
 

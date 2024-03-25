@@ -12,15 +12,18 @@ parser.add_argument("--raw_dir", type=str, help="Directory for raw data")
 parser.add_argument("--target_dir", type=str, help="Target directory to save tokenized numpy")
 parser.add_argument("--seq_length", type=int, default=4096, help="Sequence length")
 parser.add_argument("--tokenizer", type=str, default=None, help="Tokenizer path (sentencepiece)")
+parser.add_argument("--text_key", type=str, default="content", help="the field name of content")
 args = parser.parse_args()
 
 index_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"))
 file_name = open("jsonl_list.txt").readlines()[index_id].strip()
+if 'wanjuan' in file_name:
+    args.text_key = 'content'
 
 target_name = os.path.join(args.target_dir, os.path.splitext(file_name)[0] + ".npy")
 file_name = os.path.join(args.raw_dir, file_name)
 if os.path.exists(target_name):
-    print(f"the file ({file_name}) is already processed")
+    print(f"the file ({target_name}) is already processed")
     exit(0)
 
 print("Raw file path:", file_name)
@@ -47,7 +50,7 @@ buffer = []
 data = []
 for line in tqdm(lines):
     item = json.loads(line)
-    tokens = buffer + tok.encode(item["text"], bos=True, eos=True)
+    tokens = buffer + tok.encode(item[args.text_key], bos=True, eos=True)
     buffer = []
     for start_id in range(0, len(tokens), args.seq_length):
         if start_id + args.seq_length < len(tokens):
@@ -57,7 +60,7 @@ for line in tqdm(lines):
             break
 
 print("Stacking numpy...")
-data = np.array(np.stack(data), dtype=np.uint16)
+data = np.array(np.stack(data), dtype=np.uint32)
 print("Done")
 
 print(f"Saving to {target_name}...")

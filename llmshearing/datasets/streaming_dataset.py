@@ -389,7 +389,7 @@ class DynamicStreamingDataset(StreamingDataset):
             proportion = self.proportion
             stream_id = np.random.choice(range(self.num_streams), 1, p=proportion)[0].item()
             domain_sample_id = sample_ids_per_stream[stream_id]
-            domain_sample_id = domain_sample_id[self.used_num_samples_per_stream[stream_id] % self.samples_per_stream[stream_id]]
+            domain_sample_id = domain_sample_id[self.used_num_samples_per_stream[stream_id] % len(sample_ids_per_stream[stream_id])]
             self.used_num_samples_per_stream[stream_id] += 1
             yield self[domain_sample_id]
 
@@ -408,7 +408,7 @@ class TextDynamicStreamingDataset(DynamicStreamingDataset):
                  batch_size: Optional[int] = None,
                  set_names: List[str] = None,
                  proportion: List = None,
-                 is_uint16: bool = False):
+                 is_uint32: bool = False):
 
         # Build Dataset
         super().__init__(local=local,
@@ -419,17 +419,18 @@ class TextDynamicStreamingDataset(DynamicStreamingDataset):
                          set_names=set_names,
                          proportion=proportion)
         
-        # Token ids are in a uint16 format to save memory
-        self.is_uint16 = is_uint16
+        # Token ids are in a uint32 format to save memory
+        self.is_uint32 = is_uint32
         self.max_seq_len = max_seq_len
 
     def _read_binary_tokenized_sample(self, sample):
-        if self.is_uint16:
+        if self.is_uint32:
             a = np.frombuffer(sample['tokens'], dtype="B").view(
-                dtype=np.uint16).astype(np.int64)
+                dtype=np.uint32).astype(np.int64)
             tokens = torch.from_numpy(a[:self.max_seq_len].copy())
         else:
             tokens = torch.from_numpy(np.frombuffer(sample['tokens'], dtype=np.int64)[:self.max_seq_len].copy())
+        
         return tokens
 
     def get_sample(self, idx: int) -> Dict[str, Any]:
@@ -455,7 +456,7 @@ class TextStreamingDataset(StreamingDataset):
                  shuffle_seed: int = 9176,
                  num_canonical_nodes: Optional[int] = 128,
                  batch_size: Optional[int] = None,
-                 is_uint16: bool = False):
+                 is_uint32: bool = False):
 
         # Build Dataset
         super().__init__(local=local,
@@ -465,17 +466,20 @@ class TextStreamingDataset(StreamingDataset):
                          num_canonical_nodes=num_canonical_nodes,
                          batch_size=batch_size)
         
-        # Token ids are in a uint16 format to save memory
-        self.is_uint16 = is_uint16
+        # Token ids are in a uint32 format to save memory
+        self.is_uint32 = is_uint32
         self.max_seq_len = max_seq_len
+        # from transformers import AutoModelForCausalLM, AutoTokenizer
+        # self.tokenizer = AutoTokenizer.from_pretrained("/remote-home/zyzeng/LLM-Shearing/LLM-Shearing/ckpts/mha_internlm2_hf/")
 
     def _read_binary_tokenized_sample(self, sample):
-        if self.is_uint16:
+        if self.is_uint32:
             a = np.frombuffer(sample['tokens'], dtype="B").view(
-                dtype=np.uint16).astype(np.int64)
+                dtype=np.uint32).astype(np.int64)
             tokens = torch.from_numpy(a[:self.max_seq_len].copy())
         else:
             tokens = torch.from_numpy(np.frombuffer(sample['tokens'], dtype=np.int64)[:self.max_seq_len].copy())
+        # print(self.tokenizer.decode(tokens), flush=True)
         return tokens
 
     def get_sample(self, idx: int) -> Dict[str, Any]:
