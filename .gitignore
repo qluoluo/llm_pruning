@@ -2,8 +2,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-data/
-models/
+data_bin/
 logs/
 events.out.*
 *.egg-info/
+
+ckpts/
+data_raw/
+pruning_logs/
