@@ -57,7 +57,7 @@ def build_text_dataloader(cfg: DictConfig, device_batch_size: int, dynamic: bool
             batch_size=device_batch_size,
             is_uint32=cfg.dataset.get("is_uint32", False))
 
-    tokenizer = AutoTokenizer.from_pretrained(cfg.dataset.tokenizer_name)
+    tokenizer = AutoTokenizer.from_pretrained(cfg.dataset.tokenizer_name, trust_remote_code=True)
     if isinstance(dataset[0], Mapping) and "set" in dataset[0]:
         COLLATE_FN = DataCollatorForLMWithSetName
         collate_fn = COLLATE_FN(
