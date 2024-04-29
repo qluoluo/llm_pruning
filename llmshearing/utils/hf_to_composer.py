@@ -53,9 +53,9 @@ def get_layer_num_from_weights(weights):
     
 def save_hf_to_composer(hf_model_name_or_path, output_path):
     """ Convert composer model to huggingface model """ 
-    model = AutoModelForCausalLM.from_pretrained(hf_model_name_or_path)
+    model = AutoModelForCausalLM.from_pretrained(hf_model_name_or_path, trust_remote_code=True)
     hf_weights = model.state_dict()
-    
+
     n_layers = get_layer_num_from_weights(hf_weights)
     key_map = get_key_map_from_hf_to_composer(n_layers)
     composer_state_dict = {}
