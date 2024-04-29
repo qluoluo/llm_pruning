@@ -10,17 +10,17 @@ import numpy as np
 from datasets import load_dataset
 from streaming.base.format.mds import MDSReader, MDSWriter
 from transformers import LlamaTokenizerFast
-
+import sys
 from llmshearing.datasets.streaming_dataset import TextStreamingDataset
 
 
-def load_data(data_local, data_split, tokenizer_name):
+def load_data(data_local, data_split):
     """ load data from a split """
     return TextStreamingDataset(data_local, max_seq_len=2048, split=data_split)
 
 def merge_splits_with_no_bias():
     """ merge splits into one folder without bias, fully read and write, assumes the splits are in the same folder. """
-    """ load without uint16 """
+    """ load without uint32 """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--input_dir", type=str, default=None)
@@ -28,7 +28,7 @@ def merge_splits_with_no_bias():
     parser.add_argument("--split_names", nargs='+', default=[])
     parser.add_argument("--split_rows", nargs='+', default=[])
     parser.add_argument("--shuffle", action="store_true")
-    args = parser.parse_args(sys.argv[2:])
+    args = parser.parse_args()
     
     if args.input_dir is None:
         args.input_dir = [Path(os.path.dirname(args.split_names[i])) for i in range(len(args.split_names))]
