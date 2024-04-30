@@ -10,13 +10,15 @@
 - merge eval data: 运行merge_data.py，将eval下的数据merge到for_prune和for_ft
 
 ## 训练
+已经转换为composer格式的2.5b路径：/remote-home/share/personal/zyzeng/models/
+
 - 模型的config文件: llmshearing/configs/internlm/2.5b.yaml
 - 剪枝的shell文件：llmshearing/scripts/pruning_2.5b_to_100m.sh
 - 续训shell文件：
 
 需要调整一下路径，这个项目里面不少shell文件都写入了绝对路径，可以通过全局搜索zyzeng找到这些地方替换掉
 
-prune的日志日志会被写入到logs/prune下面
+prune的日志会被写入到logs/prune下面
 
 ## 问题
 在llmshearing/scripts/pruning_2.5b_to_100m.sh中，加了一个自定义的config：frozen_embedding。在train.py可以通过cfg.frozen_embedding读取这个参数。
