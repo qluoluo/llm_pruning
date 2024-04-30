@@ -10,7 +10,7 @@
 - merge eval data: 运行merge_data.py，将eval下的数据merge到for_prune和for_ft
 
 ## 训练
-已经转换为composer格式的2.5b路径：/remote-home/share/personal/zyzeng/models/
+已经转换为composer格式的2.5b路径：/remote-home/share/personal/zyzeng/models/moss2_2.5b_composer.pt
 
 - 模型的config文件: llmshearing/configs/internlm/2.5b.yaml
 - 剪枝的shell文件：llmshearing/scripts/pruning_2.5b_to_100m.sh
