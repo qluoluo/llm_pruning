@@ -12,7 +12,7 @@
 ## 训练
 - 模型的config文件: llmshearing/configs/internlm/2.5b.yaml
 - 剪枝的shell文件：llmshearing/scripts/pruning_2.5b_to_100m.sh
-- 续训shell文件：
+- 续训shell文件：参考llmshearing/scripts/continue_pretrain.sh
 
 需要调整一下路径，这个项目里面不少shell文件都写入了绝对路径，可以通过全局搜索zyzeng找到这些地方替换掉
 
