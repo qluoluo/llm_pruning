@@ -296,7 +296,7 @@ def main(cfg):
             state_dict = load_weights(cfg)
             if state_dict is not None:
                 load_state_dict(model, state_dict)
-            # model.to(torch.float16).to(local_rank)
+            model.to(torch.float16).to(local_rank)
             print(f"{global_rank} model load sucess!")
             display_gpu_info(local_rank)
         dist.barrier()
