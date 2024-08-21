@@ -43,7 +43,7 @@ if __name__ == "__main__":
     
     hf_llama2_path = sys.argv[1]
     composer_llama2_path = sys.argv[2]
-    tokenizer = AutoTokenizer.from_pretrained(hf_llama2_path)
+    tokenizer = AutoTokenizer.from_pretrained(hf_llama2_path, trust_remote_code=True)
     text = "Chamath Palihapitiya (born 3 September 1976)[1] is a Sri Lankan-born Canadian and American venture capitalist, engineer, SPAC sponsor, founder and CEO of Social Capital. Palihapitiya was an early senior executive at Facebook, working at the company from 2007 to 2011. Following his departure from Facebook, Palihapitiya started his fund, The Social+Capital Partnership, through which he invested in several companies, including Yammer and Slack. "
     input_ids = tokenizer.encode(text, return_tensors="pt")
 

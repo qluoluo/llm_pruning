@@ -6,6 +6,7 @@ import sys
 import warnings
 from types import MethodType
 from typing import Any, Dict
+import time, inspect
 
 import torch
 from composer import Logger, State, Trainer
@@ -23,6 +24,7 @@ from llmfoundry.utils.config_utils import (log_config, pop_config,
 from omegaconf import DictConfig
 from omegaconf import OmegaConf as om
 from torch import nn
+import torch.distributed
 from torch.optim.optimizer import Optimizer
 
 from llmshearing.callbacks.callbacks import DebugCallback
@@ -64,11 +66,17 @@ def build_composer_model(cfg: DictConfig):
 def load_weights(cfg: DictConfig):
     """ load weights """
     if cfg.model.get('path', None):
-        local_rank = dist.get_local_rank()
-        print(f"{local_rank=}")
-        import time
-        time.sleep(local_rank * 300)
-        state_dict = torch.load(cfg.model.path) # for loading pre-trained llama
+        
+        print("Loading state_dict from path: ", cfg.model.path, flush=True)
+
+        # local_rank = dist.get_local_rank()
+        # torch.cuda.set_device(local_rank)
+        # device = torch.device(f'cuda:{local_rank}')
+        # print("Local rank: ", local_rank, flush=True)
+
+        # time.sleep(300 * local_rank)
+        state_dict = torch.load(cfg.model.path, map_location='cpu') # for loading pre-trained llama
+
         if "state" in state_dict:
             state_dict = state_dict["state"]["model"] 
         print("Loaded model from path: ", cfg.model.path)
@@ -136,7 +144,10 @@ def main(cfg):
     )
     cfg.dist_timeout = cfg.get('dist_timeout', 1800.0)
     dist.initialize_dist(get_device(None), timeout=cfg.dist_timeout)
-    
+
+    dist.barrier()
+    print(f"dist initial sucess! {dist.get_local_rank()=}, {dist.get_global_rank()=}, {dist.get_local_world_size()=}, {dist.get_world_size()=}", flush=True)
+
     # Check for incompatibilities between the model and data loaders
     validate_config(cfg)
     
@@ -196,12 +207,38 @@ def main(cfg):
     if cfg.callbacks.data_loading.dynamic:
         cfg.model.set_names = cfg.callbacks.data_loading.set_names
     model = build_composer_model(cfg.model)
-    print(model)
-    print(cfg.model.l0_module)
+    print(f"{model=}")
+    print(f"{cfg.model.l0_module=}")
 
-    state_dict = load_weights(cfg)
-    if state_dict is not None:
-        load_state_dict(model, state_dict)
+    print(f"line {inspect.getframeinfo(inspect.currentframe()).lineno} {next(model.parameters()).device=}")
+
+    local_rank = dist.get_local_rank()
+    if local_rank == 0:
+        model.to('cpu')
+        state_dict = load_weights(cfg)
+        if state_dict is not None:
+            load_state_dict(model, state_dict)
+        print(f"line {inspect.getframeinfo(inspect.currentframe()).lineno} {next(model.parameters()).device=}")
+        # model.to('cpu')
+        # torch.cuda.empty_cache()
+        print(f"line {inspect.getframeinfo(inspect.currentframe()).lineno} {next(model.parameters()).device=}")
+        print("Load state dict success on rank 0! ", flush=True)
+        model.to(local_rank)
+        print("model move to rank 0")
+    
+    dist.barrier()
+    print(f"rank_0 load sucess! now {local_rank=} begin to boardcast!")
+
+    # 广播模型权重到其他 ranks
+    for param in model.parameters():
+        dist.broadcast(param.data, src=0)
+    print("boardcast finish")
+    model.to(local_rank)
+    print("model move to local rank finish")
+
+    # state_dict = load_weights(cfg)
+    # if state_dict is not None:
+    #     load_state_dict(model, state_dict)
      
     cfg.n_params = sum(p.numel() for p in model.parameters())
     print(f'{cfg.n_params=:.2e}')
@@ -329,4 +366,4 @@ if __name__ == '__main__':
     torch.save(cfg, save_dir + "/config.pt") 
     
     main(cfg)
-
+    

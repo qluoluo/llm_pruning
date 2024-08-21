@@ -6,8 +6,6 @@ import sys
 import warnings
 from types import MethodType
 from typing import Any, Dict
-import time, inspect
-from typing import Optional
 
 import torch
 from composer import Logger, State, Trainer
@@ -25,7 +23,6 @@ from llmfoundry.utils.config_utils import (log_config, pop_config,
 from omegaconf import DictConfig
 from omegaconf import OmegaConf as om
 from torch import nn
-import torch.distributed
 from torch.optim.optimizer import Optimizer
 
 from llmshearing.callbacks.callbacks import DebugCallback
@@ -35,52 +32,6 @@ from llmshearing.callbacks.pruning_callback import PruningCallback
 from llmshearing.datasets.load_text_dataloader import build_text_dataloader
 from llmshearing.models.model_registry import COMPOSER_MODEL_REGISTRY
 
-def display_gpu_info(local_rank: Optional[int] = None):
-    # 获取调用此函数的堆栈帧
-    frame = inspect.currentframe().f_back
-    # 获取调用行号
-    line_number = frame.f_lineno
-    
-    print("")
-    print("#"*50)
-    # 显示local rank（如果有的话）
-    if local_rank is not None:
-        print(f"Local Rank: {local_rank}", flush=True)
-
-    # 获取当前文件名和调用行号
-    file_name = frame.f_code.co_filename
-    print(f"Called from '{file_name}' at line {line_number}.", flush=True)
-
-    # 显示GPU内存使用情况
-    allocated_memory = torch.cuda.memory_allocated()
-    max_memory = torch.cuda.max_memory_allocated()
-    cached_memory = torch.cuda.memory_cached()
-    max_cached_memory = torch.cuda.max_memory_cached()
-    
-    print(f"Memory Allocated: {allocated_memory / (1024 ** 2):.2f} MB", flush=True)
-    print(f"Max Memory Allocated: {max_memory / (1024 ** 2):.2f} MB", flush=True)
-    print(f"Memory Cached: {cached_memory / (1024 ** 2):.2f} MB", flush=True)
-    print(f"Max Memory Cached: {max_cached_memory / (1024 ** 2):.2f} MB", flush=True)
-    
-    print("#"*50)
-    print("")
-def count_parameters_on_devices(model):
-        # 创建一个字典来存储不同设备及其对应的参数数量
-        device_counts = {}
-
-        # 遍历模型的所有参数
-        for param in model.parameters():
-            # 获取参数所在的设备
-            device = param.device
-            
-            # 如果该设备不在字典中，则添加到字典中，并初始化计数为1
-            if device not in device_counts:
-                device_counts[device] = 1
-            else:
-                # 否则，增加计数
-                device_counts[device] += 1
-        
-        return device_counts
 
 def is_one_hour(run_name: str):
     """ Check if the run name is for one hour training. """
@@ -113,17 +64,7 @@ def build_composer_model(cfg: DictConfig):
 def load_weights(cfg: DictConfig):
     """ load weights """
     if cfg.model.get('path', None):
-        
-        print("Loading state_dict from path: ", cfg.model.path, flush=True)
-
-        # local_rank = dist.get_local_rank()
-        # torch.cuda.set_device(local_rank)
-        # device = torch.device(f'cuda:{local_rank}')
-        # print("Local rank: ", local_rank, flush=True)
-
-        # time.sleep(300 * local_rank)
-        state_dict = torch.load(cfg.model.path, map_location='cpu') # for loading pre-trained llama
-
+        state_dict = torch.load(cfg.model.path) # for loading pre-trained llama
         if "state" in state_dict:
             state_dict = state_dict["state"]["model"] 
         print("Loaded model from path: ", cfg.model.path)
@@ -191,10 +132,7 @@ def main(cfg):
     )
     cfg.dist_timeout = cfg.get('dist_timeout', 1800.0)
     dist.initialize_dist(get_device(None), timeout=cfg.dist_timeout)
-
-    dist.barrier()
-    print(f"dist initial sucess! {dist.get_local_rank()=}, {dist.get_global_rank()=}, {dist.get_local_world_size()=}, {dist.get_world_size()=}", flush=True)
-
+    
     # Check for incompatibilities between the model and data loaders
     validate_config(cfg)
     
@@ -214,31 +152,10 @@ def main(cfg):
     # Get batch size info
     cfg = update_batch_size_info(cfg)
 
-    if cfg.get('fsdp_config', None) is not None:
-        cfg['fsdp_config']['mixed_precision'] =  {
-            'param_dtype': 'bf16',
-            'reduce_dtype': 'bf16',
-            'buffer_dtype': 'bf16',
-        }
-    fsdp_config = cfg.get('fsdp_config', None)
-    print(f"train.py fsdp_config: {fsdp_config}")
-
-    deepspeed_config = None
-    if fsdp_config is None:
-        deepspeed_config = {
-            "bp16": {"enabled": True}
-        }
-        
-
-    # deepspeed_config = cfg.get('deepspeed_config', None)
-    print(f"train.py deepspeed_config: {deepspeed_config}")
-
     # Read FSDP Config as a dict
-    
+    fsdp_config = cfg.get('fsdp_config', None)
     fsdp_config = om.to_container(fsdp_config,
                                   resolve=True) if fsdp_config else None
-    # deepspeed_config = om.to_container(deepspeed_config,
-    #                               resolve=True) if deepspeed_config else None
     
     # Restrict model init_device to 'meta' and 'cpu',
     # when multiple GPUs are available.
@@ -274,37 +191,13 @@ def main(cfg):
     print('Initializing model...')
     if cfg.callbacks.data_loading.dynamic:
         cfg.model.set_names = cfg.callbacks.data_loading.set_names
-    
-
-    local_rank = dist.get_local_rank()
-    
-    display_gpu_info(local_rank)
     model = build_composer_model(cfg.model)
-    model.to(torch.bfloat16) 
-    dist.barrier()
-    display_gpu_info(local_rank)
+    print(model)
+    print(cfg.model.l0_module)
 
-    print(f"{model=}")
-    print(f"{cfg.model.l0_module=}")
-
-    world_size = dist.get_world_size()
-    global_rank = dist.get_global_rank()
-    for i in range(world_size):
-        dist.barrier()
-        if i == global_rank:
-        # if i == 0:
-            state_dict = load_weights(cfg)
-            if state_dict is not None:
-                load_state_dict(model, state_dict)
-            # model.to(torch.float16).to(local_rank)
-            print(f"{global_rank} model load sucess!")
-            display_gpu_info(local_rank)
-        dist.barrier()
-
-    # 原始代码
-    # state_dict = load_weights(cfg)
-    # if state_dict is not None:
-    #     load_state_dict(model, state_dict)
+    state_dict = load_weights(cfg)
+    if state_dict is not None:
+        load_state_dict(model, state_dict)
      
     cfg.n_params = sum(p.numel() for p in model.parameters())
     print(f'{cfg.n_params=:.2e}')
@@ -385,7 +278,6 @@ def main(cfg):
         algorithms=algorithms,
         device_train_microbatch_size=cfg.get('device_train_microbatch_size', 'auto'),
         fsdp_config=fsdp_config,  # type: ignore
-        deepspeed_config=deepspeed_config,
         save_folder=cfg.get('save_folder', None),
         save_interval=cfg.get('save_interval', '1000ba'),
         save_num_checkpoints_to_keep=cfg.get('save_num_checkpoints_to_keep', -1),

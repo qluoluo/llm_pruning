@@ -59,70 +59,72 @@ def convert(src, tgt):
         index_dict = None
 
     os.makedirs(tgt, exist_ok=True)
-    for filename in tqdm(os.listdir(src)):
-        if filename.endswith(".bin"):
-            states = torch.load(os.path.join(src, filename))
-        elif filename.endswith(".safetensors"):
-            states = load_safetensors(os.path.join(src, filename))
-        else:
-            continue
-        llama_states = {}
-        for k, v in states.copy().items():
-            if "wqkv" in k:
-                v = rearrange(
-                    v,
-                    "(h gs d) dim -> h gs d dim",
-                    gs=2 + num_key_value_groups,
-                    d=head_dim,
-                )
-                wq, wk, wv = torch.split(v, [num_key_value_groups, 1, 1], dim=1)
-                wq = rearrange(wq, "h gs d dim -> (h gs d) dim")
-                wk = rearrange(wk, "h gs d dim -> (h gs d) dim")
-                wv = rearrange(wv, "h gs d dim -> (h gs d) dim")
-                _prefix = k.split("attention")[0]
-                wq_key = _prefix + "self_attn.q_proj.weight"
-                wk_key = _prefix + "self_attn.k_proj.weight"
-                wv_key = _prefix + "self_attn.v_proj.weight"
-                llama_states[wq_key] = wq.clone()
-                llama_states[wk_key] = wk.clone()
-                llama_states[wv_key] = wv.clone()
 
-            elif "attention.wo" in k:
-                new_k = k.replace("attention.wo", "self_attn.o_proj")
-                llama_states[new_k] = v
-            elif "feed_forward.w1" in k:
-                new_k = k.replace("feed_forward.w1", "mlp.gate_proj")
-                llama_states[new_k] = v
-            elif "feed_forward.w2" in k:
-                new_k = k.replace("feed_forward.w2", "mlp.down_proj")
-                llama_states[new_k] = v
-            elif "feed_forward.w3" in k:
-                new_k = k.replace("feed_forward.w3", "mlp.up_proj")
-                llama_states[new_k] = v
-            elif "attention_norm" in k:
-                new_k = k.replace("attention_norm", "input_layernorm")
-                llama_states[new_k] = v
-            elif "ffn_norm" in k:
-                new_k = k.replace("ffn_norm", "post_attention_layernorm")
-                llama_states[new_k] = v
-            elif "tok_embeddings" in k:
-                llama_states["model.embed_tokens.weight"] = v
-            elif "output" in k:
-                llama_states["lm_head.weight"] = v
+    if True:
+        for filename in tqdm(os.listdir(src)):
+            if filename.endswith(".bin"):
+                states = torch.load(os.path.join(src, filename))
+            elif filename.endswith(".safetensors"):
+                states = load_safetensors(os.path.join(src, filename))
             else:
-                llama_states[k] = v
+                continue
+            llama_states = {}
+            for k, v in states.copy().items():
+                if "wqkv" in k:
+                    v = rearrange(
+                        v,
+                        "(h gs d) dim -> h gs d dim",
+                        gs=2 + num_key_value_groups,
+                        d=head_dim,
+                    )
+                    wq, wk, wv = torch.split(v, [num_key_value_groups, 1, 1], dim=1)
+                    wq = rearrange(wq, "h gs d dim -> (h gs d) dim")
+                    wk = rearrange(wk, "h gs d dim -> (h gs d) dim")
+                    wv = rearrange(wv, "h gs d dim -> (h gs d) dim")
+                    _prefix = k.split("attention")[0]
+                    wq_key = _prefix + "self_attn.q_proj.weight"
+                    wk_key = _prefix + "self_attn.k_proj.weight"
+                    wv_key = _prefix + "self_attn.v_proj.weight"
+                    llama_states[wq_key] = wq.clone()
+                    llama_states[wk_key] = wk.clone()
+                    llama_states[wv_key] = wv.clone()
 
-        if index_dict is not None:
-            for k in llama_states:
-                index_dict["weight_map"][k] = filename
-        print(f"Saving to {os.path.join(tgt, filename)}...", flush=True)
-        if filename.endswith(".bin"):
-            torch.save(llama_states, os.path.join(tgt, filename))
-        elif filename.endswith(".safetensors"):
-            from safetensors.torch import save_file
-            save_file(llama_states, os.path.join(tgt, filename), metadata={"format": "pt"})
-        
-        del states
+                elif "attention.wo" in k:
+                    new_k = k.replace("attention.wo", "self_attn.o_proj")
+                    llama_states[new_k] = v
+                elif "feed_forward.w1" in k:
+                    new_k = k.replace("feed_forward.w1", "mlp.gate_proj")
+                    llama_states[new_k] = v
+                elif "feed_forward.w2" in k:
+                    new_k = k.replace("feed_forward.w2", "mlp.down_proj")
+                    llama_states[new_k] = v
+                elif "feed_forward.w3" in k:
+                    new_k = k.replace("feed_forward.w3", "mlp.up_proj")
+                    llama_states[new_k] = v
+                elif "attention_norm" in k:
+                    new_k = k.replace("attention_norm", "input_layernorm")
+                    llama_states[new_k] = v
+                elif "ffn_norm" in k:
+                    new_k = k.replace("ffn_norm", "post_attention_layernorm")
+                    llama_states[new_k] = v
+                elif "tok_embeddings" in k:
+                    llama_states["model.embed_tokens.weight"] = v
+                elif "output" in k:
+                    llama_states["lm_head.weight"] = v
+                else:
+                    llama_states[k] = v
+
+            if index_dict is not None:
+                for k in llama_states:
+                    index_dict["weight_map"][k] = filename
+            print(f"Saving to {os.path.join(tgt, filename)}...", flush=True)
+            if filename.endswith(".bin"):
+                torch.save(llama_states, os.path.join(tgt, filename))
+            elif filename.endswith(".safetensors"):
+                from safetensors.torch import save_file
+                save_file(llama_states, os.path.join(tgt, filename), metadata={"format": "pt"})
+            
+            del states
 
     print("Saving config and tokenizer...")
     # index.json
@@ -130,7 +132,11 @@ def convert(src, tgt):
         with open(os.path.join(tgt, "pytorch_model.bin.index.json"), "w") as fp:
             json.dump(index_dict, fp, indent=2)
     # tokenizer
-    tokenizer = LlamaTokenizerFast.from_pretrained(src)
+    # tokenizer = LlamaTokenizerFast.from_pretrained(src)
+    ### 更改成固定tokenizer
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(src, trust_remote_code=True)
+
     tokenizer.init_kwargs.pop("auto_map", None)
     tokenizer.save_pretrained(tgt)
     # config

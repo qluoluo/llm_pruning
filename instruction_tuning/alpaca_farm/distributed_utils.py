@@ -19,6 +19,7 @@ from .types import Tensor
 
 
 def setup(rank: Optional[int] = None, world_size: Optional[int] = None):
+    print("Enter llm_shearing/instruction_tuning/alpaca_farm/distributed_utils.py dist setup function", flush=True)
     if rank is None:
         rank = get_local_rank()
     if world_size is None:
@@ -39,6 +40,11 @@ def setup(rank: Optional[int] = None, world_size: Optional[int] = None):
             dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
         else:
             dist.init_process_group(backend="gloo", rank=rank, world_size=world_size)
+
+    print("dist setup function", flush=True)
+    print(f"{rank=}, {world_size=}", flush=True)
+    print(f"{dist.get_rank()=}, {dist.get_global_rank()=}, {dist.get_group_rank()=}, {dist.get_world_size()=}, {dist.get_backend()=}, {dist.get_backend_config()=}, {dist.get_process_group_ranks()=}", flush=True)
+
 
     return rank, world_size
 

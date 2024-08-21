@@ -52,37 +52,41 @@ def convert(src, tgt):
         index_dict = None
 
     os.makedirs(tgt, exist_ok=True)
-    for filename in tqdm(os.listdir(src)):
-        if filename.endswith(".bin"):
-            states = torch.load(os.path.join(src, filename))
-        elif filename.endswith(".safetensors"):
-            states = load_safetensors(os.path.join(src, filename))
-        else:
-            continue
-        mha_states = {}
-        
-        for k, v in states.copy().items():    
-            if 'k_proj' in k or 'v_proj' in k:
-                v = repeat_kv(v, config.num_key_value_heads, head_dim)
-            mha_states[k] = v
-        if index_dict is not None:
-            for k in mha_states:
-                index_dict["weight_map"][k] = filename
-        print(f"Saving to {os.path.join(tgt, filename)}...", flush=True)
-        if filename.endswith(".bin"):
-            torch.save(mha_states, os.path.join(tgt, filename))
-        elif filename.endswith(".safetensors"):
-            from safetensors.torch import save_file
-            save_file(mha_states, os.path.join(tgt, filename), metadata={"format": "pt"})
-        
-        del states
+    if True:
+        for filename in tqdm(os.listdir(src)):
+            if filename.endswith(".bin"):
+                states = torch.load(os.path.join(src, filename))
+            elif filename.endswith(".safetensors"):
+                states = load_safetensors(os.path.join(src, filename))
+            else:
+                continue
+            mha_states = {}
+            
+            for k, v in states.copy().items():    
+                if 'k_proj' in k or 'v_proj' in k:
+                    v = repeat_kv(v, config.num_key_value_heads, head_dim)
+                mha_states[k] = v
+            if index_dict is not None:
+                for k in mha_states:
+                    index_dict["weight_map"][k] = filename
+            print(f"Saving to {os.path.join(tgt, filename)}...", flush=True)
+            if filename.endswith(".bin"):
+                torch.save(mha_states, os.path.join(tgt, filename))
+            elif filename.endswith(".safetensors"):
+                from safetensors.torch import save_file
+                save_file(mha_states, os.path.join(tgt, filename), metadata={"format": "pt"})
+            
+            del states
     print("Saving config and tokenizer...")
     # index.json
     if index_dict is not None:
         with open(os.path.join(tgt, "pytorch_model.bin.index.json"), "w") as fp:
             json.dump(index_dict, fp, indent=2)
     # tokenizer
-    tokenizer = LlamaTokenizerFast.from_pretrained(src)
+    # tokenizer = LlamaTokenizerFast.from_pretrained(src)
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(src, trust_remote_code=True)
+
     tokenizer.init_kwargs.pop("auto_map", None)
     tokenizer.save_pretrained(tgt)
     # config
