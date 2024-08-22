@@ -24,13 +24,13 @@ to_model=13b # target model size
 config_file=${PROJ_DIR}/llmshearing/configs/internlm/${from_model}.yaml
 
 # path=$MODEL_PATH/moss2-20b-hf-bin-llama-mha-composer.pt
-path=$MODEL_PATH/moss2-20b-hf-bin-llama-mha-composer-bf16.pt
+path=$MODEL_PATH/moss2-20b-hf-bin-llama-mha-composer-bf16-true.pt
 
 # data setup
 data_local=${DATA_DIR}
 
 # basic setup
-use_gpu_num=4
+use_gpu_num=2
 max_seq_len=4096
 device_train_microbatch_size=1
 global_train_batch_size=$((use_gpu_num * 4))
@@ -90,13 +90,14 @@ frozen_embedding=True
 # Run with slurm
 #    --mem=950gb \
 #    --nodelist=slurmd-5,slurmd-9
+current_time=$(date +%Y%m%d_%H%M%S)
 sbatch --job-name ${run_name} \
     --partition=a800 \
     --nodes=1 \
     --mem=500gb \
     --gpus-per-node=${use_gpu_num} \
-    --output=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_new/prune_%A_%a.out \
-    --error=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_new/prune_%A_%a.err \
+    --output=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_time/prune_${current_time}_%A_%a.out \
+    --error=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_time/prune_${current_time}_%A_%a.err \
     $LAUNCH_SCRIPT \
     $config_file \
     run_name=${run_name} \

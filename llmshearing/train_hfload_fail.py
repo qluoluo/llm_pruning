@@ -34,6 +34,8 @@ from llmshearing.callbacks.dynamic_loading_callback import \
 from llmshearing.callbacks.pruning_callback import PruningCallback
 from llmshearing.datasets.load_text_dataloader import build_text_dataloader
 from llmshearing.models.model_registry import COMPOSER_MODEL_REGISTRY
+from composer.models import HuggingFaceModel
+
 
 def display_gpu_info(local_rank: Optional[int] = None):
     # 获取调用此函数的堆栈帧
@@ -288,13 +290,18 @@ def main(cfg):
     print(f"{local_rank=}")
     
     display_gpu_info(local_rank)
-    model = build_composer_model(cfg.model)
-    # model.to(torch.bfloat16) 
+    # model = build_composer_model(cfg.model)
+    # model.to(torch.bfloat16)
+    print(f"{cfg=}")
+    model, tokenizer = HuggingFaceModel.hf_from_composer_checkpoint(
+        f'/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/ckpts/moss2-20b-hf-bin-llama-mha-composer-bf16.pt',
+        model_instantiation_class=COMPOSER_MODEL_REGISTRY[cfg.model.name],
+        model_config_kwargs=cfg)
     # dist.barrier()
     # display_gpu_info(local_rank)
 
-    # print(f"{model=}")
-    # print(f"{cfg.model.l0_module=}")
+    print(f"{model=}")
+    print(f"{cfg.model.l0_module=}")
 
     # world_size = dist.get_world_size()
     # global_rank = dist.get_global_rank()
@@ -312,9 +319,10 @@ def main(cfg):
     #     dist.barrier()
 
     # 原始代码
-    state_dict = load_weights(cfg)
-    if state_dict is not None:
-        load_state_dict(model, state_dict)
+    # state_dict = load_weights(cfg)
+    # if state_dict is not None:
+    #     load_state_dict(model, state_dict)
+
     # model.to(torch.bfloat16)
      
     cfg.n_params = sum(p.numel() for p in model.parameters())
@@ -441,9 +449,7 @@ if __name__ == '__main__':
     # save the config files 
     save_dir = cfg.save_folder.replace("{run_name}", cfg.run_name)
     os.makedirs(save_dir, exist_ok=True)
-    save_path = save_dir + "/config.pt"
-    torch.save(cfg, save_path)
-    print("config saved to ", save_path)
+    torch.save(cfg, save_dir + "/config.pt") 
     
     main(cfg)
     
