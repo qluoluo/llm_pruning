@@ -54,8 +54,8 @@ def display_gpu_info(local_rank: Optional[int] = None):
     # 显示GPU内存使用情况
     allocated_memory = torch.cuda.memory_allocated()
     max_memory = torch.cuda.max_memory_allocated()
-    cached_memory = torch.cuda.memory_cached()
-    max_cached_memory = torch.cuda.max_memory_cached()
+    cached_memory = torch.cuda.memory_reserved()
+    max_cached_memory = torch.cuda.max_memory_reserved()
     
     print(f"Memory Allocated: {allocated_memory / (1024 ** 2):.2f} MB", flush=True)
     print(f"Max Memory Allocated: {max_memory / (1024 ** 2):.2f} MB", flush=True)
@@ -226,7 +226,13 @@ def main(cfg):
     deepspeed_config = None
     if fsdp_config is None:
         deepspeed_config = {
-            "bp16": {"enabled": True}
+            "bp16": {"enabled": True},
+            "zero_optimization": {
+                "stage": 2,
+                "offload_param": {
+                    "device": "cpu",
+                }
+            }
         }
         
 
@@ -244,6 +250,8 @@ def main(cfg):
     # when multiple GPUs are available.
     # Also 'meta' is only valid when using FSDP
     init_device = cfg.model.get('init_device', 'cpu')
+    print(f"train.py init_device: {init_device}")
+
     assert init_device in ['meta', 'cpu']
     if fsdp_config is None and init_device == 'meta':
         warnings.warn(
@@ -277,6 +285,7 @@ def main(cfg):
     
 
     local_rank = dist.get_local_rank()
+    print(f"{local_rank=}")
     
     display_gpu_info(local_rank)
     model = build_composer_model(cfg.model)
@@ -296,15 +305,17 @@ def main(cfg):
             state_dict = load_weights(cfg)
             if state_dict is not None:
                 load_state_dict(model, state_dict)
-            model.to(torch.float16).to(local_rank)
-            print(f"{global_rank} model load sucess!")
+            model = model.to(torch.bfloat16)
+            # model = model.to(local_rank)
+            print(f"{global_rank} model load sucess!", flush=True)
             display_gpu_info(local_rank)
-        dist.barrier()
+        # dist.barrier()
 
     # 原始代码
     # state_dict = load_weights(cfg)
     # if state_dict is not None:
     #     load_state_dict(model, state_dict)
+    # model.to(torch.bfloat16)
      
     cfg.n_params = sum(p.numel() for p in model.parameters())
     print(f'{cfg.n_params=:.2e}')
