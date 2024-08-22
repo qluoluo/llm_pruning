@@ -30,7 +30,7 @@ path=$MODEL_PATH/moss2-20b-hf-bin-llama-mha-composer-bf16.pt
 data_local=${DATA_DIR}
 
 # basic setup
-use_gpu_num=3
+use_gpu_num=4
 max_seq_len=4096
 device_train_microbatch_size=1
 global_train_batch_size=$((use_gpu_num * 4))

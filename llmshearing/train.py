@@ -228,7 +228,7 @@ def main(cfg):
         deepspeed_config = {
             "bp16": {"enabled": True},
             "zero_optimization": {
-                "stage": 2,
+                "stage": 3,
                 "offload_param": {
                     "device": "cpu",
                 }
@@ -299,7 +299,7 @@ def main(cfg):
     world_size = dist.get_world_size()
     global_rank = dist.get_global_rank()
     for i in range(world_size):
-        dist.barrier()
+        # dist.barrier()
         if i == global_rank:
         # if i == 0:
             state_dict = load_weights(cfg)
@@ -309,7 +309,7 @@ def main(cfg):
             # model = model.to(local_rank)
             print(f"{global_rank} model load sucess!", flush=True)
             display_gpu_info(local_rank)
-        # dist.barrier()
+        dist.barrier()
 
     # 原始代码
     # state_dict = load_weights(cfg)
