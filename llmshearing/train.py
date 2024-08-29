@@ -424,6 +424,7 @@ def main(cfg):
     log_config(cfg)
 
     if cfg.get('eval_first', False):
+        print('Eveling first before trainng...')
         trainer.eval()
 
     print('Starting training...')

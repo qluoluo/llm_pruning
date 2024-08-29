@@ -14,7 +14,7 @@ DATA_DIR=${PROJ_DIR}/data_bin/moss2.5b_sampled/for_prune
 OUTPUT_DIR=${PROJ_DIR}/ckpts/
 TRAIN_SCRIPT=${PROJ_DIR}/llmshearing/train.py
 MODEL_PATH=${PROJ_DIR}/ckpts/
-
+current_time=$(date +%Y%m%d_%H%M%S)
 # Specify $PROJ_DIR in scripts/launch.sh and scripts/srun_launch.sh if using slurm
 
 test=False
@@ -30,16 +30,17 @@ path=$MODEL_PATH/moss2-20b-hf-bin-llama-mha-composer-bf16-true.pt
 data_local=${DATA_DIR}
 
 # basic setup
-use_gpu_num=6
+use_gpu_num=7
+use_cpu_num=$((use_gpu_num * 16))
 max_seq_len=4096
-device_train_microbatch_size=1
+device_train_microbatch_size=2
 global_train_batch_size=$((use_gpu_num * 4))
-device_eval_batch_size=1
+device_eval_batch_size=4
 
 # learning setup
 lr=1e-4 # learning rate for the main parameters
 max_duration=3200ba # 0.42B tokens
-save_interval=1600ba # save in the end
+save_interval=5ba # save in the end
 t_warmup=320ba # 10% learning rate warmup 
 
 # dynamic loading setup
@@ -80,7 +81,7 @@ elif [[ $to_model == 13b ]]; then
     target_d_model=5120; target_n_heads=48; target_n_layers=40; target_intermediate_size=13824; target_vocab_size=137728
 fi
 # save directroy
-run_name=moss_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}
+run_name=moss_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}_${current_time}
 save_dir=${OUTPUT_DIR}/${run_name}
 tensorboard_dir=${save_dir} # save locally
 
@@ -90,12 +91,13 @@ frozen_embedding=True
 # Run with slurm
 #    --mem=950gb \
 #    --nodelist=slurmd-5,slurmd-9
-current_time=$(date +%Y%m%d_%H%M%S)
+
 sbatch --job-name ${run_name} \
-    --partition=a800 \
-    --nodes=1 \
-    --mem=500gb \
+    --partition=huawei \
+    --nodes=2 \
+    --mem=950gb \
     --gpus-per-node=${use_gpu_num} \
+    --cpus-per-task=${use_cpu_num} \
     --output=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_time/prune_${current_time}_%A_%a.out \
     --error=/remote-home/zgliu/wrote_program/modelPruning/llm_shearing/logs/prune_time/prune_${current_time}_%A_%a.err \
     $LAUNCH_SCRIPT \

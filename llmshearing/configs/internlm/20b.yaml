@@ -6,6 +6,7 @@ global_seed: 17
 
 # Run Name
 run_name: # If left blank, will be read from env var $COMPOSER_RUN_NAME
+# python_log_level: DEBUG
 
 model:
   name: mosaic_llama2_7b #mosaic_llama2_20b 
