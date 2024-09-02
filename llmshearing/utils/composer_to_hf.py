@@ -14,7 +14,8 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from llmshearing.models.composer_llama import ComposerMosaicLlama
 from llmshearing.models.composer_llama import LlamaAttention as la1
-
+sys.path.append("/remote-home1/zgliu/wrote_program/modelPruning/models/moss2-20b-hf")
+from tokenization_moss2 import Moss2Tokenizer
 
 def get_key_map_from_hf_to_composer(num_layers):
     """ get the keymap from hf to composer """
@@ -73,9 +74,15 @@ def construct_hf_config(model_config: om = None):
     model_class = model_config.pop("model_class")
     
     if model_class == "LlamaForCausalLM":
-        hf_model_name = "meta-llama/Llama-2-7b-hf"
-        tokenzier_name = "meta-llama/Llama-2-7b-hf"
+        # hf_model_name = "meta-llama/Llama-2-7b-hf"
+        # tokenzier_name = "meta-llama/Llama-2-7b-hf"
+        hf_model_name = '/remote-home1/zgliu/wrote_program/modelPruning/models/llama2-7b'
+        tokenzier_name = '/remote-home1/zgliu/wrote_program/modelPruning/models/moss2-20b-hf'
         config = AutoConfig.from_pretrained(hf_model_name)
+        # config['vocab_size'] = 137728
+        setattr(config, 'vocab_size', 137728)
+        setattr(config, 'torch_dtype', 'bfloat16')
+        print(f"{config=}")
         
     for key in model_config:
         setattr(config, key, model_config[key])
@@ -94,12 +101,17 @@ def save_composer_to_hf(composer_model_path, output_path=None, model_config:om =
     hf_weights = {keymap[key]: weights[key] for key in weights if "rotary" not in key}
     config, tokenizer_nanme = construct_hf_config(model_config)
 
-    model = AutoModelForCausalLM.from_config(config)
+    from transformers import LlamaForCausalLM
+    model:LlamaForCausalLM = AutoModelForCausalLM.from_config(config)
+    # print(f"{hf_weights=}")
+    # print(f"{model.model.layers=}")
+    
     model.load_state_dict(hf_weights, strict=False)
     model = model.bfloat16()
     model.save_pretrained(output_path, dtype=torch.float16)
     
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_nanme)
+    # tokenizer = AutoTokenizer.from_pretrained(tokenizer_nanme)
+    tokenizer = Moss2Tokenizer.from_pretrained(tokenizer_nanme)
     tokenizer.save_pretrained(output_path)
     
     print(f"saved hf model to {output_path}")

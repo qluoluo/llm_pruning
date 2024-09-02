@@ -374,6 +374,9 @@ def main(cfg):
         build_algorithm(name, algorithm_cfg)
         for name, algorithm_cfg in (cfg.get('algorithms') or {}).items()
     ]        
+
+    print(f'cfg.get("save_weights_only", None) = {cfg.get("save_weights_only", None)}')
+    
     # Build the Trainer
     print('Building trainer...')
     trainer = Trainer(
@@ -407,6 +410,7 @@ def main(cfg):
         python_log_level=cfg.get('python_log_level', None),
         dist_timeout=cfg.dist_timeout,
         autoresume=cfg.autoresume,
+        save_weights_only=cfg.get('save_weights_only', False),
     )
     
     # a setup for one hour training
@@ -424,6 +428,7 @@ def main(cfg):
     log_config(cfg)
 
     if cfg.get('eval_first', False):
+        print('Evaling first before trainng...')
         trainer.eval()
 
     print('Starting training...')
@@ -437,6 +442,9 @@ if __name__ == '__main__':
         yaml_cfg = om.load(f)
     cli_cfg = om.from_cli(args_list)
     cfg = om.merge(yaml_cfg, cli_cfg)
+
+    # date_time = cfg['run_name'].split('_')[-2] + '_' + cfg['run_name'].split('_')[-1]
+    # cfg['loggers']['tensorboard']['log_dir'] += '_' + date_time
      
     # save the config files 
     save_dir = cfg.save_folder.replace("{run_name}", cfg.run_name)
@@ -446,4 +454,3 @@ if __name__ == '__main__':
     print("config saved to ", save_path)
     
     main(cfg)
-    

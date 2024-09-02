@@ -47,7 +47,7 @@ train_loader:
     shuffle_seed: ${global_seed}
     is_uint32: true
   drop_last: true
-  num_workers: 8
+  num_workers: 2
 
 eval_loader:
   name: text
@@ -61,7 +61,7 @@ eval_loader:
     shuffle_seed: ${global_seed}
     is_uint32: true
   drop_last: false
-  num_workers: 8
+  num_workers: 2
 
 # Optimization
 scheduler:

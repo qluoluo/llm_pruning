@@ -1,5 +1,5 @@
 #!/bin/bash
-PROJ_DIR="/remote-home/zgliu/wrote_program/modelPruning/llm_shearing"
+PROJ_DIR="/remote-home1/zgliu/wrote_program/modelPruning/llm_shearing"
 
 # num_nodes=$(scontrol show job $SLURM_JOB_ID | grep NodeList=della | wc -l)
 num_nodes=$(scontrol show hostnames $SLURM_JOB_NODELIST | wc -l)
