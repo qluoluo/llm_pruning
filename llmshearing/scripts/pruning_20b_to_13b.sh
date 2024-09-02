@@ -16,6 +16,7 @@ OUTPUT_DIR=${PROJ_DIR}/ckpts/
 TRAIN_SCRIPT=${PROJ_DIR}/llmshearing/train.py
 MODEL_PATH=${PROJ_DIR}/ckpts/
 current_time=$(date +%Y%m%d_%H%M%S)
+current_time=$(date +%Y%m%d_%H%M%S)
 # Specify $PROJ_DIR in scripts/launch.sh and scripts/srun_launch.sh if using slurm
 
 test=False
@@ -86,6 +87,7 @@ elif [[ $to_model == 13b ]]; then
 fi
 # save directroy
 run_name=moss_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}_${current_time}
+run_name=moss_${from_model}_pruning_scaling_${update_type}_to${to_model}_sl${max_seq_len}_${current_time}
 save_dir=${OUTPUT_DIR}/${run_name}
 tensorboard_dir=${save_dir} # save locally
 
@@ -99,6 +101,9 @@ frozen_embedding=False
 # echo "before sbatch"
 
 sbatch --job-name ${run_name} \
+    --partition=huawei \
+    --nodes=2 \
+    --mem=950gb \
     --partition=huawei \
     --nodes=2 \
     --mem=950gb \
